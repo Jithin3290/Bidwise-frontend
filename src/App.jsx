@@ -8,7 +8,12 @@ import FreelancerDashboard from "./pages/Freelancer/Dashboard";
 import { Navigate } from "react-router-dom";
 import AdminDashboard from "./pages/Admin/Dashboard";
 import { useSelector } from "react-redux";
-
+import Footer from "./components/Layout/Footer";
+import About from "./pages/About";
+import Contact from "./pages/Contact";
+import Privacy from "./pages/Privacy";
+import Terms from "./pages/Terms";
+import UserProfile from "./pages/Client/Profile";
 // Protected Route Component
 const ProtectedRoute = ({ children, allowedRoles = [] }) => {
   const { user, loading } = useSelector((state) => state.auth);
@@ -151,9 +156,24 @@ function App() {
               // </ProtectedRoute>
             }
           />
+          {/* Shared Protected Routes */}
+          <Route 
+            path="/profile" 
+            element={
+              <ProtectedRoute>
+                <UserProfile />
+              </ProtectedRoute>
+            }
+          /> 
+          {/* Static Pages */}
+          <Route path="/about" element={<About />} />
+          <Route path="/contact" element={<Contact />} />
+          <Route path="/privacy" element={<Privacy />} />
+          <Route path="/terms" element={<Terms/>} />
 
         </Routes>
 
+        <Footer />
       </div>
     </>
   );

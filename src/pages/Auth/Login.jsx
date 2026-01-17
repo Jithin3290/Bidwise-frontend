@@ -3,8 +3,8 @@ import { Link, useNavigate } from "react-router-dom";
 import { GoogleLogin } from "@react-oauth/google";
 import { useDispatch, useSelector } from "react-redux";
 import { loginUser, googleLogin, resetMfaState } from "../../redux/slices/authSlice";
-import { toast } from "react-toastify";
-import api from "../../api/api.jsx";
+import { toast } from "sonner";
+import { EyeIcon, EyeOffIcon, Mail, Lock } from "lucide-react";
 
 import MFASetupModal from "./MFASetupModal";
 import MFAVerificationModal from "./MFAVerificationModal";
@@ -23,6 +23,7 @@ const Login = () => {
 
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [showPassword, setShowPassword] = useState(false);
 
   /* =========================
      Redirect after full login
@@ -67,7 +68,6 @@ const Login = () => {
         credential: credentialResponse.credential,
       })).unwrap();
 
-      // The Redux slice handles localStorage and user state
       toast.success("Google login successful");
 
       // Navigation will happen via useEffect when user state updates
@@ -76,7 +76,6 @@ const Login = () => {
       toast.error("Google login failed");
     }
   };
-
 
   /* =========================
      Cancel MFA flow
@@ -87,65 +86,140 @@ const Login = () => {
 
   return (
     <>
-      <div className="max-w-md mx-auto mt-20 bg-white p-8 rounded shadow">
-        <h2 className="text-2xl font-bold text-center">Sign in</h2>
-
-        {error && !mfaRequired && (
-          <div className="bg-red-100 text-red-700 p-2 mt-3 rounded">
-            {typeof error === "string" ? error : "Authentication error"}
-          </div>
-        )}
-
-        <form className="mt-6 space-y-4" onSubmit={handleSubmit}>
-          <input
-            type="email"
-            placeholder="Email"
-            value={email}
-            disabled={mfaRequired}
-            onChange={(e) => setEmail(e.target.value)}
-            className="w-full border p-2 rounded"
-            required
-          />
-
-          <input
-            type="password"
-            placeholder="Password"
-            value={password}
-            disabled={mfaRequired}
-            onChange={(e) => setPassword(e.target.value)}
-            className="w-full border p-2 rounded"
-            required
-          />
-
-          <button
-            disabled={loading || mfaRequired}
-            className="w-full bg-blue-600 text-white py-2 rounded disabled:opacity-50"
-          >
-            {loading ? "Signing in..." : "Sign in"}
-          </button>
-        </form>
-
-        {!mfaRequired && (
-          <>
-            <div className="my-4 text-center text-gray-500">OR</div>
-            <div className="flex justify-center">
-              <GoogleLogin
-                onSuccess={handleGoogleSuccess}
-                onError={() => toast.error("Google login failed")}
-              />
+      <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-indigo-50 flex items-center justify-center px-4 py-12">
+        <div className="w-full max-w-md">
+          {/* Card */}
+          <div className="bg-white rounded-2xl shadow-elevated p-8 animate-fade-in">
+            {/* Header */}
+            <div className="text-center mb-8">
+              <Link to="/" className="inline-block text-3xl font-bold text-gradient mb-2">
+                BidWise
+              </Link>
+              <h2 className="text-2xl font-bold text-gray-900">Welcome back</h2>
+              <p className="text-gray-500 mt-1">Sign in to your account to continue</p>
             </div>
-          </>
-        )}
 
-        <p className="text-sm text-center mt-4">
-          No account? <Link to="/register">Register</Link>
-        </p>
+            {/* Error Message */}
+            {error && !mfaRequired && (
+              <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl mb-6 text-sm">
+                {typeof error === "string" ? error : "Authentication error"}
+              </div>
+            )}
+
+            {/* Login Form */}
+            <form className="space-y-5" onSubmit={handleSubmit}>
+              {/* Email Input */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Email address
+                </label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                  </div>
+                  <input
+                    type="email"
+                    placeholder="you@example.com"
+                    value={email}
+                    disabled={mfaRequired}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className="input pl-11"
+                    required
+                  />
+                </div>
+              </div>
+
+              {/* Password Input */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Password
+                </label>
+                <div className="relative">
+                  <div className="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                  </div>
+                  <input
+                    type={showPassword ? "text" : "password"}
+                    placeholder="••••••••"
+                    value={password}
+                    disabled={mfaRequired}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className="input pl-11 pr-11"
+                    required
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword(!showPassword)}
+                    className="absolute inset-y-0 right-0 pr-4 flex items-center"
+                  >
+                    {showPassword ? (
+                      <EyeOffIcon className="h-5 w-5 text-gray-400 hover:text-gray-600" />
+                    ) : (
+                      <EyeIcon className="h-5 w-5 text-gray-400 hover:text-gray-600" />
+                    )}
+                  </button>
+                </div>
+              </div>
+
+              {/* Forgot Password Link */}
+              <div className="flex justify-end">
+                <Link to="/forgot-password" className="text-sm text-primary-600 hover:text-primary-700 font-medium">
+                  Forgot password?
+                </Link>
+              </div>
+
+              {/* Submit Button */}
+              <button
+                type="submit"
+                disabled={loading || mfaRequired}
+                className="w-full btn-primary disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+              >
+                {loading ? (
+                  <div className="flex items-center justify-center">
+                    <div className="h-5 w-5 border-2 border-white border-t-transparent rounded-full animate-spin mr-2" />
+                    Signing in...
+                  </div>
+                ) : (
+                  "Sign in"
+                )}
+              </button>
+            </form>
+
+            {/* Divider */}
+            {!mfaRequired && (
+              <>
+                <div className="relative my-6">
+                  <div className="absolute inset-0 flex items-center">
+                    <div className="w-full border-t border-gray-200" />
+                  </div>
+                  <div className="relative flex justify-center text-sm">
+                    <span className="px-4 bg-white text-gray-500">Or continue with</span>
+                  </div>
+                </div>
+
+                {/* Google Login */}
+                <div className="flex justify-center">
+                  <GoogleLogin
+                    onSuccess={handleGoogleSuccess}
+                    onError={() => toast.error("Google login failed")}
+                    shape="rectangular"
+                    size="large"
+                    width="100%"
+                  />
+                </div>
+              </>
+            )}
+
+            {/* Register Link */}
+            <p className="text-center text-sm text-gray-500 mt-8">
+              Don't have an account?{" "}
+              <Link to="/register" className="text-primary-600 font-semibold hover:text-primary-700">
+                Create one
+              </Link>
+            </p>
+          </div>
+        </div>
       </div>
 
-      {/* =========================
-          MFA MODALS
-      ========================= */}
-
+      {/* MFA Modals */}
       {mfaRequired && mfaSetupRequired && (
         <MFASetupModal
           isOpen={true}

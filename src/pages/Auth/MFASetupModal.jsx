@@ -3,6 +3,7 @@ import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import api from "../../api/api";
 import { verifyMFA } from "../../redux/slices/authSlice";
+import { X, Shield, Smartphone } from "lucide-react";
 
 const MFASetupModal = ({ isOpen, onClose }) => {
   const dispatch = useDispatch();
@@ -55,76 +56,124 @@ const MFASetupModal = ({ isOpen, onClose }) => {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-white w-full max-w-md rounded-lg p-6">
-
-        <h2 className="text-xl font-semibold text-center mb-4">
-          Set up MFA
-        </h2>
-
-        {error && (
-          <div className="bg-red-100 text-red-700 p-2 mb-3 rounded">
-            {error}
+    <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+      <div className="bg-white w-full max-w-md rounded-2xl shadow-elevated overflow-hidden animate-fade-in">
+        {/* Header */}
+        <div className="bg-gradient-to-r from-primary-600 to-primary-700 px-6 py-4 flex items-center justify-between">
+          <div className="flex items-center gap-3">
+            <div className="h-10 w-10 bg-white/20 rounded-xl flex items-center justify-center">
+              <Shield className="h-5 w-5 text-white" />
+            </div>
+            <div>
+              <h2 className="text-lg font-semibold text-white">Set up MFA</h2>
+              <p className="text-sm text-primary-100">Secure your account</p>
+            </div>
           </div>
-        )}
+          <button
+            onClick={onClose}
+            className="p-2 hover:bg-white/10 rounded-lg transition-colors"
+          >
+            <X className="h-5 w-5 text-white" />
+          </button>
+        </div>
 
-        {step === 1 && (
-          <>
-            <p className="text-sm text-gray-600 mb-2">
-              Scan this QR code using Google Authenticator or Authy.
-            </p>
+        {/* Content */}
+        <div className="p-6">
+          {error && (
+            <div className="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-xl mb-4 text-sm">
+              {error}
+            </div>
+          )}
 
-            {qrCode && (
-              <div className="flex justify-center my-4">
-                <img src={qrCode} alt="MFA QR" />
+          {/* Step Indicator */}
+          <div className="flex items-center justify-center gap-2 mb-6">
+            <div className={`h-2 w-16 rounded-full ${step >= 1 ? 'bg-primary-500' : 'bg-gray-200'}`} />
+            <div className={`h-2 w-16 rounded-full ${step >= 2 ? 'bg-primary-500' : 'bg-gray-200'}`} />
+          </div>
+
+          {step === 1 && (
+            <div className="space-y-4">
+              <div className="flex items-center gap-3 p-4 bg-blue-50 rounded-xl">
+                <Smartphone className="h-5 w-5 text-blue-600" />
+                <p className="text-sm text-blue-800">
+                  Scan this QR code using Google Authenticator or Authy.
+                </p>
               </div>
-            )}
 
-            <p className="text-xs text-gray-500 break-all text-center">
-              {secret}
-            </p>
+              {qrCode && (
+                <div className="flex justify-center my-6">
+                  <div className="p-4 bg-white border-2 border-gray-100 rounded-xl shadow-soft">
+                    <img src={qrCode} alt="MFA QR" className="w-48 h-48" />
+                  </div>
+                </div>
+              )}
 
-            <button
-              onClick={() => setStep(2)}
-              className="w-full bg-blue-600 text-white py-2 rounded mt-4"
-            >
-              Continue
-            </button>
+              <div className="bg-gray-50 p-4 rounded-xl">
+                <p className="text-xs text-gray-500 mb-1">Manual entry code:</p>
+                <p className="text-sm font-mono text-gray-700 break-all select-all">
+                  {secret}
+                </p>
+              </div>
 
-            <button
-              onClick={onClose}
-              className="w-full text-sm text-gray-500 mt-2"
-            >
-              Cancel
-            </button>
-          </>
-        )}
+              <button
+                onClick={() => setStep(2)}
+                className="w-full btn-primary"
+              >
+                Continue to Verification
+              </button>
 
-        {step === 2 && (
-          <>
-            <p className="text-sm text-gray-600 mb-2">
-              Enter the 6-digit code from your authenticator app.
-            </p>
+              <button
+                onClick={onClose}
+                className="w-full py-2 text-sm text-gray-500 hover:text-gray-700 transition-colors"
+              >
+                Cancel
+              </button>
+            </div>
+          )}
 
-            <input
-              type="text"
-              value={token}
-              onChange={(e) => setToken(e.target.value.replace(/\D/g, ""))}
-              maxLength={6}
-              className="w-full border p-2 rounded text-center text-lg tracking-widest"
-              placeholder="000000"
-            />
+          {step === 2 && (
+            <div className="space-y-4">
+              <p className="text-sm text-gray-600 text-center">
+                Enter the 6-digit code from your authenticator app
+              </p>
 
-            <button
-              onClick={handleVerify}
-              disabled={loading}
-              className="w-full bg-green-600 text-white py-2 rounded mt-4"
-            >
-              {loading ? "Verifying..." : "Verify & Enable MFA"}
-            </button>
-          </>
-        )}
+              <input
+                type="text"
+                value={token}
+                onChange={(e) => {
+                  setError("");
+                  setToken(e.target.value.replace(/\D/g, ""));
+                }}
+                maxLength={6}
+                className="w-full px-4 py-4 border-2 border-gray-200 rounded-xl text-center text-2xl font-bold tracking-[0.5em] focus:border-primary-500 focus:ring-0 transition-colors"
+                placeholder="000000"
+                autoFocus
+              />
 
+              <button
+                onClick={handleVerify}
+                disabled={loading || token.length !== 6}
+                className="w-full btn-primary disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {loading ? (
+                  <div className="flex items-center justify-center gap-2">
+                    <div className="h-5 w-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                    Verifying...
+                  </div>
+                ) : (
+                  "Verify & Enable MFA"
+                )}
+              </button>
+
+              <button
+                onClick={() => setStep(1)}
+                className="w-full py-2 text-sm text-gray-500 hover:text-gray-700 transition-colors"
+              >
+                ← Back to QR Code
+              </button>
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

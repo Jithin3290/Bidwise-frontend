@@ -38,7 +38,7 @@ import {
   UserMinusIcon,
 } from "lucide-react";
 import React, { useState, useEffect } from "react";
-const API_BASE_URL = "https://kamcomuser.duckdns.org/api/auth";
+const API_BASE_URL = "http://localhost:8000/api/auth";
 
 const UserProfile = () => {
   // Main state
