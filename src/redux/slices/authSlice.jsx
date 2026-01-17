@@ -204,6 +204,24 @@ const authSlice = createSlice({
       .addCase(fetchCurrentUser.rejected, (state) => {
         state.user = null;
         state.isAuthenticated = false;
+      })
+
+      /* ---------- GOOGLE LOGIN ---------- */
+      .addCase(googleLogin.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(googleLogin.fulfilled, (state, action) => {
+        state.loading = false;
+        state.user = action.payload.user;
+        state.isAuthenticated = true;
+
+        localStorage.setItem("access_token", action.payload.access);
+        localStorage.setItem("refresh_token", action.payload.refresh);
+      })
+      .addCase(googleLogin.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload;
       });
   },
 });

@@ -4,6 +4,7 @@ import { GoogleLogin } from "@react-oauth/google";
 import { useDispatch, useSelector } from "react-redux";
 import { loginUser, googleLogin, resetMfaState } from "../../redux/slices/authSlice";
 import { toast } from "react-toastify";
+import api from "../../api/api.jsx";
 
 import MFASetupModal from "./MFASetupModal";
 import MFAVerificationModal from "./MFAVerificationModal";
@@ -61,16 +62,21 @@ const Login = () => {
      Google login
   ========================= */
   const handleGoogleSuccess = async (credentialResponse) => {
-    const res = await dispatch(
-      googleLogin({ credential: credentialResponse.credential })
-    );
+    try {
+      const result = await dispatch(googleLogin({
+        credential: credentialResponse.credential,
+      })).unwrap();
 
-    if (googleLogin.fulfilled.match(res)) {
+      // The Redux slice handles localStorage and user state
       toast.success("Google login successful");
-    } else {
+
+      // Navigation will happen via useEffect when user state updates
+    } catch (err) {
+      console.error("Google login error:", err);
       toast.error("Google login failed");
     }
   };
+
 
   /* =========================
      Cancel MFA flow
@@ -144,7 +150,7 @@ const Login = () => {
         <MFASetupModal
           isOpen={true}
           onClose={cancelMfaFlow}
-          onComplete={() => {}}
+          onComplete={() => { }}
         />
       )}
 
