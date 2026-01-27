@@ -202,7 +202,7 @@ const Register = () => {
     setIsLoading(true);
     try {
       const res = await axios.post(
-        `${import.meta.env.VITE_API_URL || 'https://kamcomuser.duckdns.org/api'}/auth/google/`,
+        `${import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000/api'}/auth/google/`,
         { 
           credential: credentialResponse.credential,
           account_types: selectedAccountTypes
@@ -404,7 +404,7 @@ const Register = () => {
           {/* reCAPTCHA */}
           <div className="flex justify-center my-4">
             <ReCAPTCHA 
-              sitekey="6LcxH8MrAAAAAEJQdX6E7UtbjTZxE8RTlTBcEuv3" 
+              sitekey="6LdJcUosAAAAAKhoRKb57UsxkjmWEzvIGiVHh6h_" 
               onChange={handleRecaptchaChange} 
             />
           </div>

@@ -41,11 +41,11 @@ export const NotificationProvider = ({ children }) => {
     // Setup WebSocket connection
     const handleNewNotification = (notification) => {
       console.log('New notification received:', notification);
-      
+
       // Update state
       setUnreadCount(prev => prev + 1);
       setRecentNotifications(prev => [notification, ...prev.slice(0, 9)]); // Keep last 10
-      
+
       // Show toast notification with custom styling
       toast.info(
         <NotificationToast notification={notification} />,
@@ -64,7 +64,7 @@ export const NotificationProvider = ({ children }) => {
           }
         }
       );
-      
+
       // Show browser notification if permission granted
       if (Notification.permission === 'granted') {
         const browserNotif = new Notification(notification.title, {
@@ -73,7 +73,7 @@ export const NotificationProvider = ({ children }) => {
           tag: `notification_${notification.id}`,
           requireInteraction: notification.priority === 'urgent'
         });
-        
+
         browserNotif.onclick = () => {
           if (notification.action_url) {
             window.focus();
@@ -100,7 +100,7 @@ export const NotificationProvider = ({ children }) => {
       } else {
         console.log('Notification WebSocket disconnected');
         // Show disconnection warning
-        
+
       }
     };
 
@@ -127,16 +127,16 @@ export const NotificationProvider = ({ children }) => {
 
   const loadUnreadCount = async () => {
     try {
-      const response = await fetch('https://kamcomuser.duckdns.org/api/notifications/stats/', {
+      const response = await fetch('http://127.0.0.1:8003/api/notifications/stats/', {
         headers: {
           'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
           'Content-Type': 'application/json'
         }
       });
-      
+
       if (response.ok) {
         const stats = await response.json();
-        setUnreadCount(stats.unread || 0);
+        setUnreadCount(stats.unread_count || 0);
       }
     } catch (error) {
       console.error('Error loading unread count:', error);
@@ -145,9 +145,9 @@ export const NotificationProvider = ({ children }) => {
 
   const markNotificationAsRead = (notificationId) => {
     setUnreadCount(prev => Math.max(0, prev - 1));
-    setRecentNotifications(prev => 
-      prev.map(notif => 
-        notif.id === notificationId 
+    setRecentNotifications(prev =>
+      prev.map(notif =>
+        notif.id === notificationId
           ? { ...notif, status: 'read', read_at: new Date().toISOString() }
           : notif
       )
@@ -156,11 +156,11 @@ export const NotificationProvider = ({ children }) => {
 
   const markAllAsRead = () => {
     setUnreadCount(0);
-    setRecentNotifications(prev => 
-      prev.map(notif => ({ 
-        ...notif, 
-        status: 'read', 
-        read_at: notif.read_at || new Date().toISOString() 
+    setRecentNotifications(prev =>
+      prev.map(notif => ({
+        ...notif,
+        status: 'read',
+        read_at: notif.read_at || new Date().toISOString()
       }))
     );
   };

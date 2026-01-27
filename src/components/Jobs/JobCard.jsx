@@ -5,7 +5,7 @@ import {
   MessageCircle
 } from 'lucide-react';
 
-const API_BASE_URL = 'https://kamcomuser.duckdns.org';
+const API_BASE_URL = 'http://127.0.0.1:8002/api'; // Adjust based on your .env configuration
 
 const JobCard = ({ 
   job, 

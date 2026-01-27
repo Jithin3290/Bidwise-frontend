@@ -116,7 +116,7 @@ const MessagingSystem = ({
     userFetchCache.current.add(userIdToFetch);
 
     try {
-      const response = await fetch(`https://kamcomuser.duckdns.org/api/auth/users/${userIdToFetch}/profile/`, {
+      const response = await fetch(`http://127.0.0.1:8000/api/auth/users/${userIdToFetch}/profile/`, {
         headers: {
           'Authorization': "Bearer secure-service-token-123",
           'Content-Type': 'application/json',

@@ -30,7 +30,7 @@ import {
   Mail,
 } from 'lucide-react'
 
-const API_BASE_URL = 'https://kamcomuser.duckdns.org/api/auth';
+const API_BASE_URL = 'http://127.0.0.1:8000/api/auth';
 
 // Utility functions for safe data handling
 const safeNumber = (value, defaultValue = 0) => {

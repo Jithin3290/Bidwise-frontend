@@ -1,7 +1,7 @@
 // src/services/notificationsApi.js
 import axios from 'axios';
 
-const API_BASE_URL =  'https://kamcomuser.duckdns.org/api';
+const API_BASE_URL = 'http://127.0.0.1:8003/api';
 
 // Create axios instance with default config
 const apiClient = axios.create({
@@ -90,29 +90,16 @@ export const notificationsApi = {
     }
   },
 
-  // Delete notification (if supported by backend)
-  // Delete notification (with optional service token)
-async deleteNotification(notificationId) {
-  const headers = {
-      'Content-Type': 'application/json',
-    };
-
-    // Use service token if provided
- 
-      headers.Authorization = `Bearer secure-service-token-123`;
-
-      // fallback to user token
-   
-
-    const response = await apiClient.delete(
-      `/notifications/${notificationId}/delete/`,
-      { headers }
-    );
-    console.log(headers)
-    return response.data;
- 
-}
-,
+  // Delete notification
+  async deleteNotification(notificationId) {
+    try {
+      const response = await apiClient.delete(`/notifications/${notificationId}/delete/`);
+      return response.data;
+    } catch (error) {
+      console.error('Error deleting notification:', error);
+      throw error;
+    }
+  },
 
   // Create notification (for admin/service use)
   async createNotification(notificationData) {
@@ -144,21 +131,21 @@ export class NotificationWebSocket {
       return;
     }
 
-    const wsUrl = `wss://kamcomuser.duckdns.org/ws/notifications/?token=${token}`;
-    
+    const wsUrl = `ws://127.0.0.1:8003/ws/notifications/?token=${token}`;
+
     try {
       this.ws = new WebSocket(wsUrl);
-      
+
       this.ws.onopen = () => {
         console.log('Connected to notification WebSocket');
         this.reconnectAttempts = 0;
         this.onConnectionChange?.(true);
       };
-      
+
       this.ws.onmessage = (event) => {
         try {
           const data = JSON.parse(event.data);
-          
+
           if (data.type === 'notification') {
             this.onNotification?.(data.data);
           } else if (data.type === 'connection_established') {
@@ -168,11 +155,11 @@ export class NotificationWebSocket {
           console.error('Error parsing WebSocket message:', error);
         }
       };
-      
+
       this.ws.onclose = (event) => {
         console.log('Notification WebSocket connection closed:', event.code);
         this.onConnectionChange?.(false);
-        
+
         // Attempt to reconnect if not a normal closure
         if (event.code !== 1000 && this.reconnectAttempts < this.maxReconnectAttempts) {
           setTimeout(() => {
@@ -182,7 +169,7 @@ export class NotificationWebSocket {
           }, this.reconnectInterval);
         }
       };
-      
+
       this.ws.onerror = (error) => {
         console.error('Notification WebSocket error:', error);
       };
