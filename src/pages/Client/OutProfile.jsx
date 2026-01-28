@@ -742,9 +742,9 @@ const PublicProfile = ({ apiBaseUrl = 'http://127.0.0.1:8000/api/auth' }) => {
               <MessageCircle className="w-5 h-5" />
               Message {profile.first_name || profile.username}
             </button>
-            <button className="flex-1 border border-gray-300 hover:bg-gray-50 text-gray-700 font-medium py-3 px-6 rounded-lg transition-colors">
+            {/* <button className="flex-1 border border-gray-300 hover:bg-gray-50 text-gray-700 font-medium py-3 px-6 rounded-lg transition-colors">
               Save Profile
-            </button>
+            </button> */}
           </div>
         )}
 
@@ -754,7 +754,7 @@ const PublicProfile = ({ apiBaseUrl = 'http://127.0.0.1:8000/api/auth' }) => {
             <p className="text-blue-800 font-medium mb-2">This is your public profile</p>
             <p className="text-blue-600 text-sm">This is how other users see your profile</p>
             <button 
-              onClick={() => navigate('/profile/edit')}
+              onClick={() => navigate('/profile')}
               className="mt-3 bg-blue-600 hover:bg-blue-700 text-white font-medium py-2 px-6 rounded-lg transition-colors"
             >
               Edit Profile

@@ -4,59 +4,66 @@ import { useAuth } from '../../context/AuthContext'
 
 const MFAVerificationModal = ({ isOpen, onClose, onSuccess, credentials }) => {
   const { api } = useAuth()
-  
+
   const [verificationCode, setVerificationCode] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [useBackupCode, setUseBackupCode] = useState(false)
 
   const handleVerification = async () => {
-  if (!verificationCode || (useBackupCode ? verificationCode.length !== 8 : verificationCode.length !== 6)) {
-    setError(useBackupCode ? 'Please enter a valid 8-character backup code' : 'Please enter a valid 6-digit code')
-    return
-  }
-
-  setLoading(true)
-  setError('')
-  
-  try {
-    const response = await api.post('/auth/mfa/verify-setup/', {
-      email: credentials.email,
-      password: credentials.password,
-      token: verificationCode
-    })
-
-    // ✅ only store tokens if they exist
-    if (response.data.access && response.data.refresh) {
-      localStorage.setItem('access_token', response.data.access)
-      localStorage.setItem('refresh_token', response.data.refresh)
+    if (!verificationCode || (useBackupCode ? verificationCode.length !== 8 : verificationCode.length !== 6)) {
+      setError(useBackupCode ? 'Please enter a valid 8-character backup code' : 'Please enter a valid 6-digit code')
+      return
     }
 
-    // ✅ safe user load
-    const user = response.data.user || JSON.parse(localStorage.getItem('user') || '{}')
-    const primaryAccountType = user.account_types?.[0] || 'freelancer'
+    setLoading(true)
+    setError('')
 
-    onSuccess()
+    try {
+      const response = await api.post('/auth/mfa/verify-setup/', {
+        email: credentials.email,
+        password: credentials.password,
+        token: verificationCode
+      })
 
-    const redirectPath = sessionStorage.getItem('redirectAfterLogin')
-    if (redirectPath) {
-      sessionStorage.removeItem('redirectAfterLogin')
-      window.location.href = redirectPath
-    } else {
-      if (primaryAccountType === 'client') {
-        window.location.href = '/client/dashboard'
-      } else if (primaryAccountType === 'admin') {
-        window.location.href = '/admin/dashboard'
-      } else {
-        window.location.href = '/freelancer/dashboard'
+      // Store tokens if they exist
+      if (response.data.access && response.data.refresh) {
+        localStorage.setItem('access_token', response.data.access)
+        localStorage.setItem('refresh_token', response.data.refresh)
       }
+
+      // Get user data from the API response - this contains account_types
+      const userData = response.data.user
+      console.log('MFA verification user data:', userData)
+
+      // Determine account type from the response
+      const accountTypes = userData?.account_types || []
+      console.log('Account types from MFA response:', accountTypes)
+
+      onSuccess()
+
+      // Check redirect path or route based on account types
+      const redirectPath = sessionStorage.getItem('redirectAfterLogin')
+      if (redirectPath) {
+        sessionStorage.removeItem('redirectAfterLogin')
+        window.location.href = redirectPath
+      } else {
+        // Check if user is admin first (higher priority)
+        if (accountTypes.includes('admin')) {
+          console.log('Redirecting to admin dashboard')
+          window.location.href = '/admin/dashboard'
+        } else if (accountTypes.includes('client')) {
+          window.location.href = '/client/dashboard'
+        } else {
+          window.location.href = '/freelancer/dashboard'
+        }
+      }
+    } catch (err) {
+      setError(err.response?.data?.error || 'Invalid authentication code. Please try again.')
+    } finally {
+      setLoading(false)
     }
-  } catch (err) {
-    setError(err.response?.data?.error || 'Invalid authentication code. Please try again.')
-  } finally {
-    setLoading(false)
   }
-}
 
   const handleInputChange = (e) => {
     const value = e.target.value
@@ -107,7 +114,7 @@ const MFAVerificationModal = ({ isOpen, onClose, onSuccess, credentials }) => {
                 {useBackupCode ? 'Enter Backup Code' : 'Enter Authentication Code'}
               </h3>
               <p className="text-gray-600">
-                {useBackupCode 
+                {useBackupCode
                   ? 'Enter one of your saved backup codes:'
                   : 'Open your authenticator app and enter the 6-digit code:'
                 }
@@ -153,8 +160,8 @@ const MFAVerificationModal = ({ isOpen, onClose, onSuccess, credentials }) => {
                   onClick={toggleBackupCode}
                   className="text-sm text-blue-600 hover:text-blue-700 underline"
                 >
-                  {useBackupCode 
-                    ? 'Use authenticator app instead' 
+                  {useBackupCode
+                    ? 'Use authenticator app instead'
                     : 'Use backup code instead'
                   }
                 </button>

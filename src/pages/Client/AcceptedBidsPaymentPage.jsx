@@ -368,12 +368,12 @@ const AcceptedBidsPaymentPage = () => {
                   : 'Accept some proposals to see them here'
                 }
               </p>
-              <button
+              {/* <button
                 onClick={() => navigate('/client/bids')}
                 className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
               >
                 View All Proposals
-              </button>
+              </button> */}
             </div>
           ) : (
             filteredBids.map((bid) => {

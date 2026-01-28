@@ -73,7 +73,7 @@ const FreelancerDashboard = () => {
         {/* Quick Search */}
         <div className="bg-white p-6 rounded-lg border border-gray-200 mb-8">
           <div className="flex flex-col md:flex-row md:items-center space-y-4 md:space-y-0 md:space-x-4">
-            <div className="flex-grow">
+            {/* <div className="flex-grow">
               <div className="relative rounded-md shadow-sm">
                 <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                   <SearchIcon className="h-5 w-5 text-gray-400" />
@@ -84,10 +84,10 @@ const FreelancerDashboard = () => {
                   placeholder="Search for jobs by keyword, skill, or category"
                 />
               </div>
-            </div>
+            </div> */}
             <div className="flex-shrink-0">
               <Link
-                to="/freelancer/browse-jobs"
+                to="/jobs"
                 className="w-full md:w-auto flex justify-center items-center px-6 py-3 border border-transparent text-base font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700"
               >
                 Find Jobs
@@ -180,12 +180,12 @@ const FreelancerDashboard = () => {
                     </div>
                   </div>
                   <div className="mt-4 md:mt-0">
-                    <Link
+                    {/* <Link
                       to={`/freelancer/jobs/${job.id}`}
                       className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-blue-600 hover:bg-blue-700"
                     >
                       View Job
-                    </Link>
+                    </Link> */}
                   </div>
                 </div>
               </div>

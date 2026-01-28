@@ -16,7 +16,7 @@ import axios from 'axios';
 const BidsManagementDashboard = () => {
   const jobsContext = useJobs();
   const { user } = useContext(AuthContext);
-  
+
   if (!jobsContext) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
@@ -30,7 +30,7 @@ const BidsManagementDashboard = () => {
   }
 
   const { myJobs = [], loading: jobsLoading = false, loadMyJobs } = jobsContext;
-  
+
   const [selectedJob, setSelectedJob] = useState(null);
   const [jobBids, setJobBids] = useState([]);
   const [loadingBids, setLoadingBids] = useState(false);
@@ -47,6 +47,9 @@ const BidsManagementDashboard = () => {
     sortBy: 'created_at',
     sortOrder: 'desc'
   });
+
+  // Separate state for search input to prevent re-renders on every keystroke
+  const [searchInput, setSearchInput] = useState('');
 
   const [aiScores, setAiScores] = useState({});
   const [loadingScores, setLoadingScores] = useState(false);
@@ -103,27 +106,25 @@ const BidsManagementDashboard = () => {
     }
   }, [myJobs, selectedJob]);
 
+  // Debounce search input - only update bidFilters after user stops typing
+  useEffect(() => {
+    const timeoutId = setTimeout(() => {
+      if (searchInput !== bidFilters.search) {
+        setBidFilters(prev => ({ ...prev, search: searchInput }));
+      }
+    }, 500); // 500ms debounce
+
+    return () => clearTimeout(timeoutId);
+  }, [searchInput]);
+
   const getUserIdFromBid = (bid) => {
-    if (bid && !bid._logged) {
-      console.log('=== BID STRUCTURE DEBUG ===');
-      console.log('Full bid object:', bid);
-      console.log('bid.freelancer_profile:', bid.freelancer_profile);
-      console.log('Possible user_id locations:');
-      console.log('  - bid.freelancer_profile?.user_id:', bid.freelancer_profile?.user_id);
-      console.log('  - bid.freelancer_profile?.id:', bid.freelancer_profile?.id);
-      console.log('  - bid.user_id:', bid.user_id);
-      console.log('  - bid.freelancer_id:', bid.freelancer_id);
-      console.log('  - bid.freelancer:', bid.freelancer);
-      bid._logged = true;
-    }
-    
-    const userId = bid.freelancer_profile?.user_id || 
-                   bid.freelancer_profile?.id || 
-                   bid.user_id || 
-                   bid.freelancer_id ||
-                   bid.freelancer;
-    
-    console.log(`getUserIdFromBid result: ${userId} (type: ${typeof userId})`);
+    // Get the user ID from various possible locations in the bid object
+    const userId = bid.freelancer_profile?.user_id ||
+      bid.freelancer_profile?.id ||
+      bid.user_id ||
+      bid.freelancer_id ||
+      bid.freelancer;
+
     return userId;
   };
 
@@ -138,9 +139,9 @@ const BidsManagementDashboard = () => {
         }
         return skill;
       }).filter(Boolean) || [];
-      
+
       console.log('Extracted skills:', requiredSkills);
-      
+
       const payload = {
         job_id: job.id,
         job_description: job.description || job.title,
@@ -160,20 +161,20 @@ const BidsManagementDashboard = () => {
           scoresMap[match.user_id] = match;
           scoresMap[String(match.user_id)] = match;
         });
-        
+
         setAiScores(scoresMap);
         console.log('=== AI SCORES DEBUG ===');
         console.log('AI Scores loaded:', scoresMap);
         console.log('Score keys (original):', Object.keys(scoresMap).filter(k => !isNaN(k) && Number(k) < 100));
         console.log('Current bids:', jobBids);
-        
+
         if (jobBids.length > 0) {
           console.log('=== BID TO SCORE MAPPING ===');
           jobBids.forEach(bid => {
             const userId = getUserIdFromBid(bid);
             const hasScore = !!scoresMap[userId];
             console.log(`Bid ID: ${bid.id}, Freelancer: ${bid.freelancer_profile?.username}, User ID: ${userId} (type: ${typeof userId}), Has Score: ${hasScore}`);
-            
+
             if (!hasScore) {
               console.warn(`❌ No score found for user ${userId}. Available score keys:`, Object.keys(scoresMap).filter(k => !isNaN(k) && Number(k) < 100));
             } else {
@@ -196,7 +197,7 @@ const BidsManagementDashboard = () => {
     try {
       setLoadingBids(true);
       setError('');
-      
+
       const params = {
         ordering: bidFilters.sortOrder === 'desc' ? `-${bidFilters.sortBy}` : bidFilters.sortBy,
       };
@@ -232,26 +233,26 @@ const BidsManagementDashboard = () => {
   const handleBidStatusUpdate = async (bidId, status, feedback = '') => {
     try {
       setActionLoading(prev => ({ ...prev, [bidId]: status }));
-      
-      await bidsApiService.updateBidStatus(bidId, { 
-        status, 
-        feedback: feedback || rejectionReason 
+
+      await bidsApiService.updateBidStatus(bidId, {
+        status,
+        feedback: feedback || rejectionReason
       });
-      
+
       const successMessage = `Proposal ${status === 'accepted' ? 'accepted' : 'declined'} successfully`;
       toast.success(successMessage);
-      
+
       if (selectedJob) {
         loadJobBids(selectedJob.id);
       }
-      
+
       if (loadMyJobs && typeof loadMyJobs === 'function') {
         loadMyJobs();
       }
-      
+
       setShowRejectModal(false);
       setRejectionReason('');
-      
+
     } catch (err) {
       console.error('Failed to update bid status:', err);
       const errorMessage = err.response?.data?.error || err.response?.data?.detail || err.message || 'Failed to update bid status';
@@ -266,7 +267,7 @@ const BidsManagementDashboard = () => {
       setSelectedBid(bid);
       setPaymentForm(prev => ({
         ...prev,
-        amount: bid.bid_type === 'hourly' 
+        amount: bid.bid_type === 'hourly'
           ? bid.hourly_rate * (bid.estimated_hours || 40)
           : bid.total_amount
       }));
@@ -296,7 +297,7 @@ const BidsManagementDashboard = () => {
 
   const handlePaymentSubmit = async (e) => {
     e.preventDefault();
-    
+
     // Basic validation
     if (!paymentForm.cardNumber || !paymentForm.cardName || !paymentForm.expiryDate || !paymentForm.cvv) {
       toast.error('Please fill in all payment details');
@@ -333,13 +334,13 @@ const BidsManagementDashboard = () => {
       // Simulated payment processing
       // Replace this with your actual payment API call
       await new Promise(resolve => setTimeout(resolve, 2000));
-      
+
       // After successful payment, accept the bid
       await handleBidStatusUpdate(selectedBid.id, 'accepted');
-      
+
       toast.success('Payment processed successfully!');
       setShowPaymentModal(false);
-      
+
       // Reset payment form
       setPaymentForm({
         cardNumber: '',
@@ -430,7 +431,7 @@ const BidsManagementDashboard = () => {
     });
   };
 
-  const jobsWithApplications = myJobs.filter(job => 
+  const jobsWithApplications = myJobs.filter(job =>
     job.status !== 'draft' && job.status !== 'cancelled'
   );
 
@@ -470,7 +471,7 @@ const BidsManagementDashboard = () => {
   const AIScoreBadge = ({ bid }) => {
     const userId = getUserIdFromBid(bid);
     const scoreData = aiScores[userId];
-    
+
     if (loadingScores) {
       return (
         <div className="flex items-center gap-2 px-3 py-2 bg-gray-50 rounded-lg border border-gray-200">
@@ -509,7 +510,7 @@ const BidsManagementDashboard = () => {
   const AIScoreDetails = ({ bid }) => {
     const userId = getUserIdFromBid(bid);
     const scoreData = aiScores[userId];
-    
+
     if (!scoreData) return null;
 
     return (
@@ -518,7 +519,7 @@ const BidsManagementDashboard = () => {
           <Brain size={20} className="text-purple-600" />
           <h4 className="font-semibold text-gray-900">AI Matching Analysis</h4>
         </div>
-        
+
         <div className="grid grid-cols-3 gap-4 mb-4">
           <div className="text-center">
             <div className={`text-2xl font-bold ${getScoreColor(scoreData.combined_score).split(' ')[0]}`}>
@@ -613,7 +614,7 @@ const BidsManagementDashboard = () => {
               </button>
             </div>
           </div>
-          
+
           <form onSubmit={handlePaymentSubmit} className="p-6">
             <div className="mb-6 p-4 bg-blue-50 rounded-lg border border-blue-200">
               <div className="flex items-center justify-between mb-2">
@@ -623,7 +624,7 @@ const BidsManagementDashboard = () => {
                 </span>
               </div>
               <p className="text-xs text-gray-600">
-                {selectedBid.bid_type === 'hourly' 
+                {selectedBid.bid_type === 'hourly'
                   ? `${formatCurrency(selectedBid.hourly_rate)}/hr × ${selectedBid.estimated_hours || 40} hours`
                   : 'Fixed price project'
                 }
@@ -775,8 +776,8 @@ const BidsManagementDashboard = () => {
           <div className="flex items-center gap-3">
             <div className="w-12 h-12 bg-gray-200 rounded-full flex items-center justify-center">
               {bid.freelancer_profile?.profile_picture_url ? (
-                <img 
-                  src={bid.freelancer_profile.profile_picture_url} 
+                <img
+                  src={bid.freelancer_profile.profile_picture_url}
                   alt={bid.freelancer_profile.username}
                   className="w-12 h-12 rounded-full object-cover"
                 />
@@ -810,7 +811,7 @@ const BidsManagementDashboard = () => {
 
           <div className="text-right">
             <p className="text-2xl font-bold text-gray-900">
-              {bid.bid_type === 'hourly' 
+              {bid.bid_type === 'hourly'
                 ? `${formatCurrency(bid.hourly_rate)}/hr`
                 : formatCurrency(bid.total_amount)
               }
@@ -889,21 +890,21 @@ const BidsManagementDashboard = () => {
                 >
                   {actionLoading[bid.id] === 'accepted' ? 'Accepting...' : (
                     <>
-                  
+
                       Accept & Pay
                     </>
                   )}
                 </button>
               </>
             )}
-            
+
             {bid.status === 'accepted' && (
               <span className="inline-flex items-center gap-1 px-2 py-1 bg-green-100 text-green-800 text-sm rounded-full">
                 <CheckCircle size={14} />
                 Accepted
               </span>
             )}
-            
+
             {bid.status === 'rejected' && (
               <span className="inline-flex items-center gap-1 px-2 py-1 bg-red-100 text-red-800 text-sm rounded-full">
                 <XCircle size={14} />
@@ -943,7 +944,7 @@ const BidsManagementDashboard = () => {
               </button>
             </div>
           </div>
-          
+
           <div className="p-6">
             <AIScoreDetails bid={selectedBid} />
 
@@ -954,7 +955,7 @@ const BidsManagementDashboard = () => {
               </div>
             </div>
           </div>
-          
+
           <div className="p-6 border-t border-gray-200 bg-gray-50">
             <div className="flex justify-end gap-3">
               {selectedBid.status === 'pending' && (
@@ -1001,12 +1002,12 @@ const BidsManagementDashboard = () => {
           <div className="p-6 border-b border-gray-200">
             <h3 className="text-lg font-semibold text-gray-900">Decline Proposal</h3>
           </div>
-          
+
           <div className="p-6">
             <p className="text-gray-600 mb-4">
               Are you sure you want to decline this proposal from {selectedBid.freelancer_profile?.first_name} {selectedBid.freelancer_profile?.last_name}?
             </p>
-            
+
             <div className="mb-4">
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 Reason (optional)
@@ -1020,7 +1021,7 @@ const BidsManagementDashboard = () => {
               />
             </div>
           </div>
-          
+
           <div className="p-6 border-t border-gray-200 bg-gray-50">
             <div className="flex justify-end gap-3">
               <button
@@ -1101,39 +1102,37 @@ const BidsManagementDashboard = () => {
                   <div
                     key={job.id}
                     onClick={() => handleJobSelect(job)}
-                    className={`p-4 rounded-lg border cursor-pointer transition-colors ${
-                      selectedJob?.id === job.id
+                    className={`p-4 rounded-lg border cursor-pointer transition-colors ${selectedJob?.id === job.id
                         ? 'border-blue-500 bg-blue-50'
                         : 'border-gray-200 bg-white hover:border-gray-300'
-                    }`}
+                      }`}
                   >
                     <h3 className="font-medium text-gray-900 mb-2 line-clamp-2">
                       {job.title}
                     </h3>
-                    
+
                     <div className="space-y-2 text-sm">
                       <div className="flex items-center justify-between">
                         <span className="text-gray-600">Proposals:</span>
                         <span className="font-medium">{job.applications_count || 0}</span>
                       </div>
-                      
+
                       <div className="flex items-center justify-between">
                         <span className="text-gray-600">Status:</span>
-                        <span className={`font-medium capitalize ${
-                          job.status === 'published' ? 'text-green-600' :
-                          job.status === 'in_progress' ? 'text-blue-600' :
-                          job.status === 'completed' ? 'text-purple-600' :
-                          'text-gray-600'
-                        }`}>
+                        <span className={`font-medium capitalize ${job.status === 'published' ? 'text-green-600' :
+                            job.status === 'in_progress' ? 'text-blue-600' :
+                              job.status === 'completed' ? 'text-purple-600' :
+                                'text-gray-600'
+                          }`}>
                           {job.status?.replace('_', ' ')}
                         </span>
                       </div>
-                      
+
                       <div className="flex items-center justify-between">
                         <span className="text-gray-600">Budget:</span>
                         <span className="font-medium">{job.budget_display || 'Not specified'}</span>
                       </div>
-                      
+
                       <div className="flex items-center justify-between">
                         <span className="text-gray-600">Posted:</span>
                         <span className="font-medium">{job.time_posted || formatDate(job.created_at)}</span>
@@ -1216,16 +1215,16 @@ const BidsManagementDashboard = () => {
                       </div>
                     )}
                   </div>
-                  
+
                   <div className="flex items-center gap-4">
-                    <button 
+                    {/* <button 
                       onClick={handleExportBids}
                       className="flex items-center gap-2 px-4 py-2 border border-gray-300 rounded-lg hover:bg-gray-50"
                     >
                       <Download size={16} />
                       Export
-                    </button>
-                    <button 
+                    </button> */}
+                    <button
                       onClick={() => window.open(`/jobs/${selectedJob.id}`, '_blank')}
                       className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700"
                     >
@@ -1243,14 +1242,14 @@ const BidsManagementDashboard = () => {
                         <input
                           type="text"
                           placeholder="Search proposals..."
-                          value={bidFilters.search}
-                          onChange={(e) => setBidFilters(prev => ({ ...prev, search: e.target.value }))}
+                          value={searchInput}
+                          onChange={(e) => setSearchInput(e.target.value)}
                           className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                         />
                       </div>
                     </div>
-                    
-                    <select 
+
+                    <select
                       value={bidFilters.status}
                       onChange={(e) => setBidFilters(prev => ({ ...prev, status: e.target.value }))}
                       className="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
@@ -1260,8 +1259,8 @@ const BidsManagementDashboard = () => {
                       <option value="accepted">Accepted</option>
                       <option value="rejected">Rejected</option>
                     </select>
-                    
-                    <select 
+
+                    <select
                       value={`${bidFilters.sortBy}-${bidFilters.sortOrder}`}
                       onChange={(e) => {
                         const [sortBy, sortOrder] = e.target.value.split('-');
@@ -1285,7 +1284,7 @@ const BidsManagementDashboard = () => {
                       <div>
                         <h4 className="font-semibold text-gray-900 mb-1">AI-Powered Matching Active</h4>
                         <p className="text-sm text-gray-700">
-                          We've analyzed each freelancer's profile against your job requirements. 
+                          We've analyzed each freelancer's profile against your job requirements.
                           The AI match score considers skill alignment, profile similarity, and experience level.
                         </p>
                         <div className="mt-2 flex items-center gap-4 text-xs text-gray-600">
@@ -1322,7 +1321,7 @@ const BidsManagementDashboard = () => {
                       <Users size={48} className="mx-auto text-gray-400 mb-4" />
                       <h3 className="text-xl font-medium text-gray-900 mb-2">No proposals found</h3>
                       <p className="text-gray-600">
-                        {bidFilters.search || bidFilters.status !== 'all' 
+                        {bidFilters.search || bidFilters.status !== 'all'
                           ? 'Try adjusting your filters to see more results'
                           : 'No proposals have been received for this job yet.'
                         }
