@@ -196,7 +196,22 @@ const AppRoutes = () => {
               </ProtectedRoute>
             }
           />
-
+          <Route 
+            path="/client/saved-jobs" 
+            element={
+                <JobProvider>
+                <SavedJobsPage/>
+                </JobProvider>
+            } 
+          />
+          <Route 
+            path="/client/profile" 
+            element={
+              <ProtectedRoute allowedRoles={['client', 'freelancer', 'admin']}>
+                <UserProfile />
+              </ProtectedRoute>
+            } 
+          />
           {/* Freelancer */}
           <Route
             path="/freelancer/dashboard"
@@ -216,6 +231,15 @@ const AppRoutes = () => {
                 </BidsProvider>
               </ProtectedRoute>
             }
+          />
+          <Route 
+            path="/freelancer/accepted" 
+            element={
+              <ProtectedRoute allowedRoles={['freelancer']}>
+               
+<FreelancerAcceptedBidsPage/>           
+              </ProtectedRoute>
+            } 
           />
           {/* Post Job Route */}
           <Route 
