@@ -217,7 +217,23 @@ const AppRoutes = () => {
               </ProtectedRoute>
             }
           />
-
+          {/* Post Job Route */}
+          <Route 
+            path="/jobs/post" 
+            element={
+              <ProtectedRoute allowedRoles={['client']}>
+                <JobProvider>
+                  <PostJobPage 
+                    onBack={() => window.history.back()}
+                    onJobPosted={(job) => {
+                      console.log('Job posted:', job);
+                      window.location.href = '/client/my-jobs';
+                    }}
+                  />
+                </JobProvider>
+              </ProtectedRoute>
+            } 
+          />
           {/* Admin */}
           <Route
             path="/admin/dashboard"
@@ -263,6 +279,14 @@ const AppRoutes = () => {
                 <NotificationsPage />
               </ProtectedRoute>
             }
+          />
+          <Route 
+            path="/freelancer/profile/:userId" 
+            element={
+              <ProtectedRoute>
+                <FreelancerProfile />
+              </ProtectedRoute>
+            } 
           />
         </Routes>
       </main>

@@ -203,7 +203,7 @@ const MyJobsPage = ({ onJobClick, onPostJob }) => {
       onPostJob();
     } else {
       // Fallback navigation
-      window.location.href = '/freelancer/post-jobs';
+      window.location.href = '/jobs/post';
     }
   };
 

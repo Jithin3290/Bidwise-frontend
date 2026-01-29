@@ -1109,7 +1109,7 @@ const handleProfilePictureChange = async (e) => {
               <div className="flex items-center space-x-2">
                 <input
                   type="text"
-                  value={`${window.location.origin}/profile/${user?.id}`}
+                  value={`${window.location.origin}/freelancer/profile/${user?.id}`}
                   readOnly
                   className="flex-1 px-3 py-2 bg-white border border-green-300 rounded-md text-sm"
                 />
@@ -1131,7 +1131,7 @@ const handleProfilePictureChange = async (e) => {
 
           <div className="flex space-x-3">
             <button
-              onClick={() => window.open(`/profile/${user?.id}`, "_blank")}
+              onClick={() => window.open(`/freelancer/profile/${user?.id}`, "_blank")}
               className="flex items-center px-4 py-2 bg-blue-600 text-white rounded-md hover:bg-blue-700"
             >
               <EyeIcon className="h-4 w-4 mr-2" />

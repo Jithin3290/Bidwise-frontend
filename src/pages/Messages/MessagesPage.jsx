@@ -8,7 +8,7 @@ const MessagesPage = () => {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
   const { user } = useContext(AuthContext);
-  
+
   // Extract parameters from URL
   const recipientId = searchParams.get('recipient');
   const recipientName = searchParams.get('name');
@@ -19,14 +19,14 @@ const MessagesPage = () => {
   const jobTitle = searchParams.get('jobTitle');
   const bidId = searchParams.get('bidId');
   const projectId = searchParams.get('projectId');
-  
+
   // Build messageRecipient object if we have recipient data
   const messageRecipient = recipientId ? {
     userId: recipientId,
     name: recipientName || `User ${recipientId}`,
     profilePicture: recipientProfilePicture || null
   } : null;
-  
+
   // Build messageJobContext if we have job data
   const messageJobContext = (jobId || bidId || projectId) ? {
     jobId: jobId || null,
@@ -34,7 +34,7 @@ const MessagesPage = () => {
     bidId: bidId || null,
     projectId: projectId || null
   } : null;
-  
+
   // Generate initial message based on context
   const generateInitialMessage = () => {
     if (messageType === 'job' && jobTitle) {
@@ -42,7 +42,7 @@ const MessagesPage = () => {
     }
     return '';
   };
-  
+
   const [initialMessage] = useState(generateInitialMessage());
 
   // Redirect if user is not authenticated
@@ -63,13 +63,13 @@ const MessagesPage = () => {
   return (
     <div className="h-screen flex flex-col">
       {/* Optional: Add a header bar */}
-     
-      
+
+
       {/* Messaging System */}
       <div className="flex-1 overflow-hidden">
         <MessagingSystem
-          apiBaseUrl="http://localhost:8003/api"
-          wsBaseUrl="wss://localhost:8003/ws"
+          apiBaseUrl="http://127.0.0.1:8003/api"
+          wsBaseUrl="ws://127.0.0.1:8003/ws"
           messageRecipient={messageRecipient}
           messageJobContext={messageJobContext}
           messageType={messageType}

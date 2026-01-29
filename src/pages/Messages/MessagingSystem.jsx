@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useCallback, useMemo } from 'react';
 import {
-  Send, Search, MoreVertical, Phone, Video, Paperclip, 
-  Smile, ArrowLeft, MessageSquare, Users, Clock, 
+  Send, Search, MoreVertical, Phone, Video, Paperclip,
+  Smile, ArrowLeft, MessageSquare, Users, Clock,
   Check, CheckCheck, X, Edit2, Trash2, Reply,
   UserPlus, Settings, Circle, AlertCircle, Loader, Menu,
   ChevronDown, Archive, Info
@@ -28,11 +28,10 @@ function parseJwt(token) {
 
 const payload = parseJwt(token);
 const currentUserId = payload?.user_id;
-const currentUsername = payload?.username;
 
-const MessagingSystem = ({ 
-  apiBaseUrl = 'https://kamcomuser.duckdns.org',
-  wsBaseUrl = 'wss://kamcomuser.duckdns.org/ws',
+const MessagingSystem = ({
+  apiBaseUrl = 'http://127.0.0.1:8003/api',
+  wsBaseUrl = 'ws://127.0.0.1:8003/ws',
   initialConversationId = null,
   onNewMessage = null,
   onConversationChange = null,
@@ -61,13 +60,13 @@ const MessagingSystem = ({
   const [loading, setLoading] = useState(false);
   const [wsConnected, setWsConnected] = useState(false);
   const [connectionError, setConnectionError] = useState(null);
-  
+
   // User and status management
   const [userProfiles, setUserProfiles] = useState(new Map());
   const [onlineUsers, setOnlineUsers] = useState(new Set());
   const [typingUsers, setTypingUsers] = useState(new Map());
   const [unreadCounts, setUnreadCounts] = useState({});
-  
+
   // UI state
   const [editingMessage, setEditingMessage] = useState(null);
   const [replyToMessage, setReplyToMessage] = useState(null);
@@ -77,7 +76,7 @@ const MessagingSystem = ({
   const [showMessageActions, setShowMessageActions] = useState(null);
   const [deletingConversation, setDeletingConversation] = useState(null);
   const [confirmDelete, setConfirmDelete] = useState(null);
-  
+
   // Refs
   const wsRef = useRef(null);
   const messagesEndRef = useRef(null);
@@ -109,62 +108,63 @@ const MessagingSystem = ({
   }, [activeConversation, isMobile]);
 
   const fetchUserProfile = useCallback(async (userIdToFetch) => {
-    if (!userIdToFetch || userProfiles.has(userIdToFetch) || userFetchCache.current.has(userIdToFetch)) {
-      return userProfiles.get(userIdToFetch);
+    if (!/^\d+$/.test(String(userIdToFetch))) {
+      console.error("Invalid user ID:", userIdToFetch);
+      return null;
     }
 
-    userFetchCache.current.add(userIdToFetch);
+    if (
+      !userIdToFetch ||
+      userProfiles.has(String(userIdToFetch)) ||
+      userFetchCache.current.has(String(userIdToFetch))
+    ) {
+      return userProfiles.get(String(userIdToFetch));
+    }
+
+    userFetchCache.current.add(String(userIdToFetch));
 
     try {
-      const response = await fetch(`http://127.0.0.1:8000/api/auth/users/${userIdToFetch}/profile/`, {
-        headers: {
-          'Authorization': "Bearer secure-service-token-123",
-          'Content-Type': 'application/json',
-        },
-      });
+      const SERVICE_TOKEN = "secure-service-token-123"; // STUDY ONLY
 
-      if (response.ok) {
-        const userData = await response.json();
-        const profile = {
-          id: userIdToFetch,
-          username: userData.username || `User ${userIdToFetch}`,
-          full_name: userData.full_name || userData.first_name && userData.last_name ? 
-            `${userData.first_name} ${userData.last_name}` : userData.username,
-          profile_picture: userData.profile_picture,
-          is_online: userData.is_online || false,
-          last_seen: userData.last_seen,
-          email: userData.email,
-          first_name: userData.first_name,
-          last_name: userData.last_name
-        };
-
-        setUserProfiles(prev => new Map(prev.set(userIdToFetch, profile)));
-        
-        if (profile.is_online) {
-          setOnlineUsers(prev => new Set([...prev, userIdToFetch]));
+      const response = await fetch(
+        `http://127.0.0.1:8000/api/auth/users/${userIdToFetch}/profile/`,
+        {
+          headers: {
+            'Authorization': `Bearer ${SERVICE_TOKEN}`,
+            'Content-Type': 'application/json',
+          },
         }
+      );
 
-        return profile;
+      if (!response.ok) {
+        throw new Error("Profile fetch failed");
       }
-    } catch (error) {
-      console.error('Failed to fetch user profile:', error);
-      const fallbackProfile = {
-        id: userIdToFetch,
-        username: `User ${userIdToFetch}`,
-        full_name: `User ${userIdToFetch}`,
-        profile_picture: null,
-        is_online: false,
-        last_seen: null
+
+      const userData = await response.json();
+
+      const profile = {
+        id: String(userIdToFetch),
+        username: userData.username,
+        full_name:
+          userData.full_name ||
+          `${userData.first_name || ''} ${userData.last_name || ''}`.trim(),
+        profile_picture: userData.profile_picture || null,
+        is_online: userData.is_online || false,
+        last_seen: userData.last_seen || null,
       };
-      
-      setUserProfiles(prev => new Map(prev.set(userIdToFetch, fallbackProfile)));
-      return fallbackProfile;
+
+      setUserProfiles(prev => new Map(prev.set(String(userIdToFetch), profile)));
+      return profile;
+
+    } catch (err) {
+      console.error("Failed to fetch user profile:", err);
+      return null;
     }
-  }, [userProfiles]);
+  }, [token, userProfiles]);
 
   const fetchConversationUsers = useCallback(async (conversationsList) => {
     const userIds = new Set();
-    
+
     conversationsList.forEach(conv => {
       if (conv.participants && Array.isArray(conv.participants)) {
         conv.participants.forEach(id => userIds.add(String(id)));
@@ -192,7 +192,7 @@ const MessagingSystem = ({
 
     try {
       const response = await fetch(url, config);
-      
+
       if (!response.ok) {
         if (response.status === 401) {
           throw new Error('Authentication failed');
@@ -205,7 +205,7 @@ const MessagingSystem = ({
           throw new Error(`HTTP error! status: ${response.status}, message: ${errorText}`);
         }
       }
-      
+
       const data = await response.json();
       return data;
     } catch (error) {
@@ -218,14 +218,14 @@ const MessagingSystem = ({
   const deleteConversation = useCallback(async (conversationId) => {
     try {
       setDeletingConversation(conversationId);
-      
+
       await apiCall(`/notifications/conversations/${conversationId}/update/`, {
         method: 'PATCH',
         body: JSON.stringify({ is_active: false }),
       });
 
       setConversations(prev => prev.filter(c => c.id !== conversationId));
-      
+
       if (activeConversation?.id === conversationId) {
         setActiveConversation(null);
         setMessages([]);
@@ -251,7 +251,7 @@ const MessagingSystem = ({
         body: JSON.stringify({ content: newContent }),
       });
 
-      setMessages(prev => prev.map(msg => 
+      setMessages(prev => prev.map(msg =>
         msg.id === messageId ? { ...msg, ...response, is_edited: true } : msg
       ));
 
@@ -269,7 +269,7 @@ const MessagingSystem = ({
         method: 'DELETE',
       });
 
-      setMessages(prev => prev.map(msg => 
+      setMessages(prev => prev.map(msg =>
         msg.id === messageId ? { ...msg, is_deleted: true, content: 'Message deleted' } : msg
       ));
 
@@ -280,8 +280,17 @@ const MessagingSystem = ({
     }
   }, [apiCall]);
 
+
+
   const startConversation = useCallback(async (participantIds, conversationOptions = {}) => {
     try {
+      const sanitizedParticipantIds = participantIds
+        .map(id => String(id))
+        .filter(id => /^\d+$/.test(id));
+
+      if (sanitizedParticipantIds.length !== participantIds.length) {
+        throw new Error("Invalid participant ID");
+      }
       const {
         type = messageType,
         title = '',
@@ -291,14 +300,14 @@ const MessagingSystem = ({
         initialMessage: initialMsg = null
       } = conversationOptions;
 
-      const allParticipants = [...new Set([String(userId), ...participantIds.map(id => String(id))])];
-      
+      const allParticipants = [...new Set([String(userId), ...sanitizedParticipantIds])];
+
       // Create a unique key for this conversation attempt
-      const conversationKey = type === 'job' && jobId 
+      const conversationKey = type === 'job' && jobId
         ? `job-${jobId}-${allParticipants.sort().join('-')}`
         : type === 'project' && projectId
-        ? `project-${projectId}-${allParticipants.sort().join('-')}`
-        : `${type}-${allParticipants.sort().join('-')}`;
+          ? `project-${projectId}-${allParticipants.sort().join('-')}`
+          : `${type}-${allParticipants.sort().join('-')}`;
 
       // Check if we're already creating this conversation
       if (conversationCreationInProgress.current.has(conversationKey)) {
@@ -310,23 +319,23 @@ const MessagingSystem = ({
 
       // Check for existing conversation more thoroughly
       let existingConversation = null;
-      
+
       if (type === 'direct' && allParticipants.length === 2) {
         // Check in local state first
-        existingConversation = conversations.find(conv => 
+        existingConversation = conversations.find(conv =>
           conv.conversation_type === 'direct' &&
           conv.participants.length === 2 &&
           conv.participants.every(p => allParticipants.includes(String(p)))
         );
       } else if (type === 'job' && jobId) {
         // For job conversations, check by job_id
-        existingConversation = conversations.find(conv => 
+        existingConversation = conversations.find(conv =>
           conv.job_id === jobId &&
           conv.participants.every(p => allParticipants.includes(String(p)))
         );
       } else if (type === 'project' && projectId) {
         // For project conversations, check by project_id
-        existingConversation = conversations.find(conv => 
+        existingConversation = conversations.find(conv =>
           conv.project_id === projectId &&
           conv.participants.every(p => allParticipants.includes(String(p)))
         );
@@ -336,12 +345,12 @@ const MessagingSystem = ({
         console.log('Found existing conversation:', existingConversation.id);
         setActiveConversation(existingConversation);
         if (isMobile) setShowSidebar(false);
-        
+
         // Set initial message if provided
         if (initialMsg) {
           setMessageText(initialMsg);
         }
-        
+
         if (onConversationStarted) {
           onConversationStarted(existingConversation);
         }
@@ -404,11 +413,11 @@ const MessagingSystem = ({
       setStartingConversation(false);
       // Clear the in-progress flag after a short delay
       setTimeout(() => {
-        const key = messageType === 'job' && messageJobContext?.jobId 
+        const key = messageType === 'job' && messageJobContext?.jobId
           ? `job-${messageJobContext.jobId}-${participantIds.sort().join('-')}`
           : messageType === 'project' && messageJobContext?.projectId
-          ? `project-${messageJobContext.projectId}-${participantIds.sort().join('-')}`
-          : `${messageType}-${participantIds.sort().join('-')}`;
+            ? `project-${messageJobContext.projectId}-${participantIds.sort().join('-')}`
+            : `${messageType}-${participantIds.sort().join('-')}`;
         conversationCreationInProgress.current.delete(key);
       }, 2000);
     }
@@ -417,19 +426,20 @@ const MessagingSystem = ({
   const generateConversationTitle = useCallback((type, participantIds) => {
     switch (type) {
       case 'job':
-        return messageJobContext?.jobTitle ? 
-          `Job: ${messageJobContext.jobTitle}` : 
+        return messageJobContext?.jobTitle ?
+          `Job: ${messageJobContext.jobTitle}` :
           'Job Discussion';
       case 'project':
-        return messageJobContext?.projectName ? 
-          `Project: ${messageJobContext.projectName}` : 
+        return messageJobContext?.projectName ?
+          `Project: ${messageJobContext.projectName}` :
           'Project Discussion';
       case 'direct':
       default:
         if (participantIds.length === 2) {
           const otherUserId = participantIds.find(id => String(id) !== String(userId));
           const otherUser = userProfiles.get(String(otherUserId));
-          return otherUser ? `Chat with ${otherUser.username}` : 'Direct Message';
+          return otherUser ? `Chat with User ${otherUser.id}` : 'Direct Message';
+
         }
         return `Group Chat (${participantIds.length} members)`;
     }
@@ -437,7 +447,7 @@ const MessagingSystem = ({
 
   useEffect(() => {
     if (autoStartConversation && messageRecipient && messageRecipient.userId && !startingConversation) {
-      const existingConversation = conversations.find(conv => 
+      const existingConversation = conversations.find(conv =>
         conv.conversation_type === (messageType || 'direct') &&
         conv.participants.includes(String(messageRecipient.userId)) &&
         conv.participants.includes(String(userId))
@@ -504,7 +514,7 @@ const MessagingSystem = ({
 
         ws.onclose = (event) => {
           setWsConnected(false);
-          
+
           if (event.code === 4001) {
             setConnectionError('Authentication failed: Token missing');
           } else if (event.code === 4002) {
@@ -512,7 +522,7 @@ const MessagingSystem = ({
           } else if (event.code !== 1000 && token && userId) {
             reconnectAttempts++;
             const delay = Math.min(1000 * Math.pow(2, reconnectAttempts), 30000);
-            
+
             reconnectTimeoutRef.current = setTimeout(() => {
               connectWebSocket();
             }, delay);
@@ -529,7 +539,7 @@ const MessagingSystem = ({
         console.error('Failed to create WebSocket connection:', error);
         setConnectionError('Failed to create WebSocket connection');
         setWsConnected(false);
-        
+
         reconnectAttempts++;
         if (reconnectAttempts < maxReconnectAttempts) {
           const delay = Math.min(1000 * Math.pow(2, reconnectAttempts), 30000);
@@ -552,26 +562,26 @@ const MessagingSystem = ({
 
   const handleNewMessage = useCallback((message) => {
     fetchUserProfile(String(message.sender_id));
-    
+
     setMessages(prev => {
       if (prev.some(msg => msg.id === message.id)) {
         return prev;
       }
-      
+
       if (String(message.sender_id) === String(userId)) {
         const tempIndex = prev.findIndex(
-          msg => msg.tempId && 
-          msg.conversation === (message.conversation || message.conversation_id) &&
-          msg.sender_id === String(message.sender_id) &&
-          msg.content === message.content &&
-          Math.abs(new Date(msg.created_at) - new Date(message.created_at)) < 30000
+          msg => msg.tempId &&
+            msg.conversation === (message.conversation || message.conversation_id) &&
+            msg.sender_id === String(message.sender_id) &&
+            msg.content === message.content &&
+            Math.abs(new Date(msg.created_at) - new Date(message.created_at)) < 30000
         );
-        
+
         if (tempIndex !== -1) {
           const newMessages = [...prev];
           const tempSenderInfo = newMessages[tempIndex].sender_info;
-          newMessages[tempIndex] = { 
-            ...message, 
+          newMessages[tempIndex] = {
+            ...message,
             tempId: undefined,
             sending: false,
             failed: false,
@@ -580,44 +590,44 @@ const MessagingSystem = ({
           return newMessages;
         }
       }
-      
+
       if (String(message.sender_id) !== String(userId)) {
         return [...prev, message];
       }
-      
+
       const nearDuplicate = prev.find(
         msg => !msg.tempId &&
-        msg.sender_id === String(message.sender_id) &&
-        msg.content === message.content &&
-        Math.abs(new Date(msg.created_at) - new Date(message.created_at)) < 5000
+          msg.sender_id === String(message.sender_id) &&
+          msg.content === message.content &&
+          Math.abs(new Date(msg.created_at) - new Date(message.created_at)) < 5000
       );
-      
+
       if (nearDuplicate) {
         return prev;
       }
-      
+
       return [...prev, message];
     });
-    
+
     if (String(message.sender_id) !== String(userId) || message.id) {
       setConversations(prev => prev.map(conv =>
         conv.id === (message.conversation || message.conversation_id)
           ? {
-              ...conv,
-              last_message: {
-                content: message.content,
-                sender_id: message.sender_id,
-                created_at: message.created_at
-              },
-              last_message_at: message.created_at
-            }
+            ...conv,
+            last_message: {
+              content: message.content,
+              sender_id: message.sender_id,
+              created_at: message.created_at
+            },
+            last_message_at: message.created_at
+          }
           : conv
       ));
     }
-    
+
     const messageConvId = message.conversation || message.conversation_id;
-    if (String(message.sender_id) !== String(userId) && 
-        (!activeConversation || activeConversation.id !== messageConvId)) {
+    if (String(message.sender_id) !== String(userId) &&
+      (!activeConversation || activeConversation.id !== messageConvId)) {
       setUnreadCounts(prev => ({
         ...prev,
         [messageConvId]: (prev[messageConvId] || 0) + 1
@@ -660,10 +670,10 @@ const MessagingSystem = ({
       return msg;
     }));
   }, []);
-  
+
   const handleUserStatusUpdate = useCallback((statusData) => {
     const userIdStr = String(statusData.user_id);
-    
+
     if (statusData.is_online) {
       setOnlineUsers(prev => new Set([...prev, userIdStr]));
     } else {
@@ -697,10 +707,10 @@ const MessagingSystem = ({
       case 'message_sent':
         if (data.data && String(data.data.sender_id) === String(userId)) {
           setMessages(prev => prev.map(msg => {
-            if (msg.tempId && 
-                msg.content === data.data.content &&
-                msg.sender_id === String(data.data.sender_id) &&
-                Math.abs(new Date(msg.created_at) - new Date(data.data.created_at)) < 30000) {
+            if (msg.tempId &&
+              msg.content === data.data.content &&
+              msg.sender_id === String(data.data.sender_id) &&
+              Math.abs(new Date(msg.created_at) - new Date(data.data.created_at)) < 30000) {
               return {
                 ...data.data,
                 tempId: undefined,
@@ -738,18 +748,18 @@ const MessagingSystem = ({
     try {
       setLoading(true);
       const data = await apiCall('/notifications/conversations/');
-      
+
       const conversationsArray = data.results || data || [];
       setConversations(conversationsArray);
-      
+
       await fetchConversationUsers(conversationsArray);
-      
+
       const counts = {};
       conversationsArray.forEach(conv => {
         counts[conv.id] = conv.unread_count || 0;
       });
       setUnreadCounts(counts);
-      
+
       if (initialConversationId && conversationsArray.length > 0) {
         const initialConv = conversationsArray.find(c => c.id === initialConversationId);
         if (initialConv) {
@@ -769,7 +779,7 @@ const MessagingSystem = ({
     try {
       setLoading(true);
       const data = await apiCall(`/notifications/conversations/${conversationId}/messages/`);
-      
+
       const messagesArray = data.results || data || [];
       const sortedMessages = messagesArray.sort((a, b) => new Date(a.created_at) - new Date(b.created_at));
       setMessages(sortedMessages);
@@ -793,7 +803,7 @@ const MessagingSystem = ({
 
     await fetchUserProfile(String(userId));
     const currentUser = userProfiles.get(String(userId));
-    
+
     if (!currentUser) {
       console.error('Current user profile not found');
       setConnectionError('User profile not loaded');
@@ -825,21 +835,21 @@ const MessagingSystem = ({
     setMessageText('');
     setReplyToMessage(null);
     setEditingMessage(null);
-    
+
     setConversations(prev => prev.map(conv =>
       conv.id === activeConversation.id
         ? {
-            ...conv,
-            last_message: {
-              content: messageContent,
-              sender_id: String(userId),
-              created_at: tempMessage.created_at
-            },
-            last_message_at: tempMessage.created_at
-          }
+          ...conv,
+          last_message: {
+            content: messageContent,
+            sender_id: String(userId),
+            created_at: tempMessage.created_at
+          },
+          last_message_at: tempMessage.created_at
+        }
         : conv
     ));
-    
+
     handleTyping(false);
     if (typingTimeoutRef.current) {
       clearTimeout(typingTimeoutRef.current);
@@ -855,13 +865,13 @@ const MessagingSystem = ({
     try {
       if (wsRef.current && wsConnected) {
         wsRef.current.send(JSON.stringify(messageData));
-        
+
         setTimeout(() => {
           setMessages(prev => prev.map(msg =>
             msg.tempId === tempId ? { ...msg, sending: false } : msg
           ));
         }, 3000);
-        
+
       } else {
         const response = await apiCall(`/notifications/conversations/${activeConversation.id}/send/`, {
           method: 'POST',
@@ -870,11 +880,11 @@ const MessagingSystem = ({
             reply_to: replyToMessage?.id || null,
           }),
         });
-        
+
         setMessages(prev => prev.map(msg =>
-          msg.tempId === tempId ? { 
-            ...response, 
-            tempId: undefined, 
+          msg.tempId === tempId ? {
+            ...response,
+            tempId: undefined,
             sending: false,
             failed: false,
             sender_info: currentUser
@@ -896,7 +906,7 @@ const MessagingSystem = ({
 
   const selectConversation = useCallback(async (conversation) => {
     setActiveConversation(conversation);
-    
+
     if (conversation.participants) {
       await Promise.all(conversation.participants.map(id => fetchUserProfile(String(id))));
     }
@@ -955,7 +965,7 @@ const MessagingSystem = ({
     if (conversation.conversation_type === 'job' || conversation.job_id) {
       const title = conversation.title || `Job Discussion`;
       const subtitle = conversation.job_id ? `Job ID: ${conversation.job_id}` : 'Job-related chat';
-      
+
       return {
         title,
         subtitle,
@@ -969,7 +979,7 @@ const MessagingSystem = ({
     if (conversation.conversation_type === 'project' || conversation.project_id) {
       const title = conversation.title || `Project Discussion`;
       const subtitle = conversation.project_id ? `Project ID: ${conversation.project_id}` : 'Project chat';
-      
+
       return {
         title,
         subtitle,
@@ -1009,11 +1019,11 @@ const MessagingSystem = ({
     setMessageText(e.target.value);
 
     handleTyping(true);
-    
+
     if (typingTimeoutRef.current) {
       clearTimeout(typingTimeoutRef.current);
     }
-    
+
     typingTimeoutRef.current = setTimeout(() => {
       handleTyping(false);
     }, 1000);
@@ -1093,23 +1103,23 @@ const MessagingSystem = ({
     return conversations.filter(conv => {
       const convInfo = getConversationInfo(conv);
       const searchLower = searchQuery.toLowerCase();
-      
+
       if (convInfo?.title?.toLowerCase().includes(searchLower)) {
         return true;
       }
-      
+
       if (convInfo?.conversationType?.toLowerCase().includes(searchLower)) {
         return true;
       }
-      
+
       if (conv.job_id && conv.job_id.toString().includes(searchLower)) {
         return true;
       }
-      
+
       if (conv.project_id && conv.project_id.toString().includes(searchLower)) {
         return true;
       }
-      
+
       return false;
     });
   }, [conversations, searchQuery, getConversationInfo]);
@@ -1128,7 +1138,8 @@ const MessagingSystem = ({
 
     const typingUsersList = Array.from(typingUsers.keys()).map(uid => {
       const user = getUserInfo(uid);
-      return user.username;
+      return `User ${user.id}`;
+
     });
 
     return (
@@ -1177,7 +1188,7 @@ const MessagingSystem = ({
               <div className="flex items-center justify-between mb-4">
                 <h1 className="text-xl font-semibold text-gray-900">Messages</h1>
                 <div className="flex items-center gap-2">
-                  <div 
+                  <div
                     className={`w-2 h-2 rounded-full ${connectionStatus.color}`}
                     title={connectionStatus.text}
                   ></div>
@@ -1196,7 +1207,7 @@ const MessagingSystem = ({
                   )}
                 </div>
               </div>
-              
+
               {connectionError && (
                 <div className="mb-3 p-2 bg-red-50 border border-red-200 rounded-lg flex items-center gap-2">
                   <AlertCircle className="w-4 h-4 text-red-500 flex-shrink-0" />
@@ -1210,7 +1221,7 @@ const MessagingSystem = ({
                   <span className="text-xs text-blue-700">Starting conversation...</span>
                 </div>
               )}
-              
+
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
                 <input
@@ -1247,13 +1258,12 @@ const MessagingSystem = ({
             ) : (
               filteredConversations.map((conversation) => {
                 const convInfo = getConversationInfo(conversation);
-                
+
                 return (
                   <div
                     key={conversation.id}
-                    className={`flex items-center p-4 cursor-pointer hover:bg-gray-50 border-b border-gray-100 relative group ${
-                      activeConversation?.id === conversation.id ? 'bg-blue-50 border-blue-200' : ''
-                    }`}
+                    className={`flex items-center p-4 cursor-pointer hover:bg-gray-50 border-b border-gray-100 relative group ${activeConversation?.id === conversation.id ? 'bg-blue-50 border-blue-200' : ''
+                      }`}
                   >
                     <div onClick={() => selectConversation(conversation)} className="flex items-center flex-1 min-w-0">
                       <div className="relative mr-3 flex-shrink-0">
@@ -1272,7 +1282,7 @@ const MessagingSystem = ({
                           <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 rounded-full border-2 border-white"></div>
                         )}
                       </div>
-                      
+
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center justify-between mb-1">
                           <div className="flex items-center gap-2 flex-1 min-w-0">
@@ -1294,14 +1304,14 @@ const MessagingSystem = ({
                             )}
                           </div>
                         </div>
-                        
+
                         {conversation.last_message && (
                           <p className="text-sm text-gray-600 truncate mb-1">
                             {String(conversation.last_message.sender_id) === String(userId) ? 'You: ' : ''}
                             {conversation.last_message.content}
                           </p>
                         )}
-                        
+
                         <p className="text-xs text-gray-500">
                           {convInfo?.subtitle}
                         </p>
@@ -1355,7 +1365,7 @@ const MessagingSystem = ({
                         {isMobile ? <ArrowLeft className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
                       </button>
                     )}
-                    
+
                     <div className="relative mr-3 flex-shrink-0">
                       {(() => {
                         const convInfo = getConversationInfo(activeConversation);
@@ -1379,7 +1389,7 @@ const MessagingSystem = ({
                         );
                       })()}
                     </div>
-                    
+
                     <div className="flex-1 min-w-0">
                       {(() => {
                         const convInfo = getConversationInfo(activeConversation);
@@ -1399,14 +1409,14 @@ const MessagingSystem = ({
                       })()}
                     </div>
                   </div>
-                  
+
                   <div className="flex items-center gap-2">
-                    <button 
+                    <button
                       onClick={() => setShowConversationMenu(!showConversationMenu)}
                       className="p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg relative"
                     >
                       <MoreVertical className="w-5 h-5" />
-                      
+
                       {showConversationMenu && (
                         <div className="absolute right-0 top-full mt-2 w-48 bg-white rounded-lg shadow-lg border border-gray-200 py-2 z-50">
                           <button
@@ -1437,7 +1447,7 @@ const MessagingSystem = ({
                 </div>
               ) : messages.length === 0 ? (
                 <div className="text-center text-gray-500">
-                  No messages yet. 
+                  No messages yet.
                   {messageRecipient ? (
                     <span> Start chatting with {messageRecipient.name}!</span>
                   ) : (
@@ -1447,12 +1457,12 @@ const MessagingSystem = ({
               ) : (
                 messages.map((message, index) => {
                   const isOwnMessage = String(message.sender_id) === String(userId);
-                  const showDate = index === 0 || 
+                  const showDate = index === 0 ||
                     formatDate(message.created_at) !== formatDate(messages[index - 1]?.created_at);
-                  
+
                   const senderInfo = getUserInfo(message.sender_id);
                   const messageKey = message.id || message.tempId || `${message.sender_id}-${message.created_at}-${index}`;
-                  
+
                   return (
                     <React.Fragment key={`fragment-${messageKey}`}>
                       {showDate && (
@@ -1462,7 +1472,7 @@ const MessagingSystem = ({
                           </span>
                         </div>
                       )}
-                      
+
                       <div key={`message-${messageKey}`} className={`flex ${isOwnMessage ? 'justify-end' : 'justify-start'} group`}>
                         {!isOwnMessage && (
                           <div className="mr-2 flex-shrink-0">
@@ -1471,44 +1481,41 @@ const MessagingSystem = ({
                             </div>
                           </div>
                         )}
-                        
+
                         <div className="relative max-w-[75%] md:max-w-md">
-                          <div className={`px-4 py-2 rounded-lg ${
-                            isOwnMessage 
-                              ? 'bg-blue-500 text-white' 
-                              : 'bg-gray-200 text-gray-900'
-                          } ${message.sending ? 'opacity-60' : ''} ${message.failed ? 'border-2 border-red-300' : ''}
+                          <div className={`px-4 py-2 rounded-lg ${isOwnMessage
+                            ? 'bg-blue-500 text-white'
+                            : 'bg-gray-200 text-gray-900'
+                            } ${message.sending ? 'opacity-60' : ''} ${message.failed ? 'border-2 border-red-300' : ''}
                           ${message.is_deleted ? 'italic opacity-50' : ''}`}>
-                            
+
                             {!isOwnMessage && (
                               <div className="text-xs font-medium mb-1 opacity-75">
                                 {senderInfo.full_name || senderInfo.username || `User ${message.sender_id}`}
                               </div>
                             )}
-                            
+
                             {message.reply_to_message && (
-                              <div className={`text-xs mb-2 p-2 rounded border-l-2 ${
-                                isOwnMessage 
-                                  ? 'bg-blue-600 border-blue-300' 
-                                  : 'bg-gray-300 border-gray-400'
-                              }`}>
+                              <div className={`text-xs mb-2 p-2 rounded border-l-2 ${isOwnMessage
+                                ? 'bg-blue-600 border-blue-300'
+                                : 'bg-gray-300 border-gray-400'
+                                }`}>
                                 <div className="font-medium">Replying to:</div>
                                 <div className="truncate">{message.reply_to_message.content}</div>
                               </div>
                             )}
-                            
+
                             <p className="text-sm whitespace-pre-wrap break-words">{message.content}</p>
-                            
-                            <div className={`flex items-center justify-between mt-1 text-xs ${
-                              isOwnMessage ? 'text-blue-100' : 'text-gray-500'
-                            }`}>
+
+                            <div className={`flex items-center justify-between mt-1 text-xs ${isOwnMessage ? 'text-blue-100' : 'text-gray-500'
+                              }`}>
                               <span>{formatTime(message.created_at)}</span>
-                              
+
                               <div className="flex items-center gap-1">
                                 {message.is_edited && <span>edited</span>}
                                 {message.sending && <span>sending...</span>}
                                 {message.failed && <span className="text-red-300">failed</span>}
-                                
+
                                 {isOwnMessage && !message.sending && !message.failed && !message.is_deleted && (
                                   <>
                                     {message.read_by && message.read_by.length > 0 ? (
@@ -1558,7 +1565,7 @@ const MessagingSystem = ({
                               </div>
                             </div>
                           )}
-                          
+
                           {!isOwnMessage && !message.is_deleted && (
                             <div className="absolute left-0 top-0 -mt-8 opacity-0 group-hover:opacity-100 transition-opacity">
                               <div className="flex gap-1 bg-white rounded-lg shadow-lg border border-gray-200 p-1">
@@ -1573,7 +1580,7 @@ const MessagingSystem = ({
                             </div>
                           )}
                         </div>
-                        
+
                         {isOwnMessage && (
                           <div className="ml-2 flex-shrink-0">
                             {(() => {
@@ -1591,9 +1598,9 @@ const MessagingSystem = ({
                   );
                 })
               )}
-              
+
               {renderTypingIndicator()}
-              
+
               <div ref={messagesEndRef} />
             </div>
 
@@ -1634,7 +1641,7 @@ const MessagingSystem = ({
                 <button className="hidden md:block p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg">
                   <Paperclip className="w-5 h-5" />
                 </button>
-                
+
                 <div className="flex-1">
                   <textarea
                     ref={messageInputRef}
@@ -1652,9 +1659,9 @@ const MessagingSystem = ({
                     }}
                     placeholder={
                       editingMessage ? 'Edit your message...' :
-                      messageRecipient 
-                        ? `Message ${messageRecipient.name}...` 
-                        : "Type a message..."
+                        messageRecipient
+                          ? `Message ${messageRecipient.name}...`
+                          : "Type a message..."
                     }
                     className="w-full resize-none border border-gray-300 rounded-lg px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent max-h-32"
                     rows="1"
@@ -1665,11 +1672,11 @@ const MessagingSystem = ({
                     }}
                   />
                 </div>
-                
+
                 <button className="hidden md:block p-2 text-gray-500 hover:text-gray-700 hover:bg-gray-100 rounded-lg">
                   <Smile className="w-5 h-5" />
                 </button>
-                
+
                 <button
                   onClick={() => {
                     if (editingMessage) {
@@ -1697,8 +1704,8 @@ const MessagingSystem = ({
                     Ready to chat with {messageRecipient.name}
                   </h3>
                   <p className="text-gray-500 mb-4">
-                    {startingConversation 
-                      ? 'Setting up your conversation...' 
+                    {startingConversation
+                      ? 'Setting up your conversation...'
                       : 'Start a conversation or select an existing one from the sidebar'
                     }
                   </p>
@@ -1709,7 +1716,7 @@ const MessagingSystem = ({
                   <p className="text-gray-500 mb-4">Choose a conversation from the sidebar to start messaging</p>
                 </>
               )}
-              
+
               {isMobile && (
                 <button
                   onClick={() => setShowSidebar(true)}
@@ -1718,7 +1725,7 @@ const MessagingSystem = ({
                   View Conversations
                 </button>
               )}
-              
+
               {connectionError && (
                 <div className="mt-4 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
                   <div className="flex items-center gap-2 mb-2">
@@ -1728,7 +1735,7 @@ const MessagingSystem = ({
                   <p>{connectionError}</p>
                 </div>
               )}
-              
+
               {!connectionError && !wsConnected && token && (
                 <div className="mt-4 p-3 bg-yellow-50 border border-yellow-200 rounded-lg text-sm text-yellow-700">
                   <div className="flex items-center gap-2">
@@ -1764,11 +1771,11 @@ const MessagingSystem = ({
                 <p className="text-sm text-gray-500">This action cannot be undone</p>
               </div>
             </div>
-            
+
             <p className="text-gray-600 mb-6">
               Are you sure you want to delete this conversation? All messages will be permanently removed.
             </p>
-            
+
             <div className="flex justify-end gap-3">
               <button
                 onClick={() => setConfirmDelete(null)}
@@ -1803,7 +1810,7 @@ const MessagingSystem = ({
                 <X className="w-5 h-5" />
               </button>
             </div>
-            
+
             <div className="space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -1832,36 +1839,36 @@ const MessagingSystem = ({
                   User ID or Username
                 </label>
                 <input
-                  id="userIdInput"
                   type="text"
-                  placeholder="Enter user ID (e.g., 2, 3, 4, etc.)"
-                  className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  onKeyPress={async (e) => {
-                    if (e.key === 'Enter' && e.target.value.trim()) {
+                  placeholder="Enter numeric user ID (e.g. 2)"
+                  onKeyDown={async (e) => {
+                    if (e.key === 'Enter') {
                       const participantId = e.target.value.trim();
-                      if (participantId !== userId) {
-                        try {
-                          const conversationType = document.getElementById('conversationType').value;
-                          const jobId = document.getElementById('jobIdInput')?.value || null;
-                          const title = document.getElementById('titleInput')?.value || null;
-                          
-                          await startConversation([participantId], { 
-                            type: conversationType,
-                            jobId: jobId,
-                            title: title
-                          });
-                          setShowNewConversation(false);
-                          e.target.value = '';
-                        } catch (error) {
-                          alert('Failed to start conversation: ' + error.message);
-                        }
-                      } else {
-                        alert("You can't start a conversation with yourself!");
+
+                      if (!/^\d+$/.test(participantId)) {
+                        alert("User ID must be a number");
+                        return;
+                      }
+
+                      if (participantId === String(userId)) {
+                        alert("You cannot message yourself");
+                        return;
+                      }
+
+                      try {
+                        await startConversation([participantId], {
+                          type: 'direct',
+                        });
+                        setShowNewConversation(false);
+                        e.target.value = '';
+                      } catch (err) {
+                        alert(err.message);
                       }
                     }
                   }}
                   disabled={startingConversation}
                 />
+
               </div>
 
               <div id="contextFields" style={{ display: 'none' }}>
@@ -1876,7 +1883,7 @@ const MessagingSystem = ({
                     className="w-full border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
                   />
                 </div>
-                
+
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
                     Conversation Title (Optional)
@@ -1889,7 +1896,7 @@ const MessagingSystem = ({
                   />
                 </div>
               </div>
-              
+
               <div className="text-sm text-gray-500">
                 <p>Press Enter to start a conversation</p>
                 <p className="mt-1">Available test user IDs: 2, 3, 4, 5, 6</p>
@@ -1949,8 +1956,8 @@ const MessagingSystem = ({
 
       {/* Click outside to close menus */}
       {showConversationMenu && (
-        <div 
-          className="fixed inset-0 z-40" 
+        <div
+          className="fixed inset-0 z-40"
           onClick={() => setShowConversationMenu(false)}
         />
       )}
