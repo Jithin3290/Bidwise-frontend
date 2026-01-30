@@ -146,12 +146,12 @@ const Navbar = () => {
       label: 'My Proposals',
       icon: FileText
     })
-    userMenuItems.unshift({
-        to: '/client/saved-jobs',
-        label: 'Saved Jobs',
-        icon: Bookmark,
-        active: location.pathname.includes('/client/saved-jobs')
-      })
+    // userMenuItems.unshift({
+    //     to: '/client/saved-jobs',
+    //     label: 'Saved Jobssss',
+    //     icon: Bookmark,
+    //     active: location.pathname.includes('/client/saved-jobs')
+    //   })
       userMenuItems.unshift({
         to: '/freelancer/accepted',
         label: 'Accepted Proposals',
