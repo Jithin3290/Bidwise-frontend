@@ -15,14 +15,14 @@ const AIChatWidget = () => {
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
   const navigate = useNavigate();
-  
+
   // Get authentication state
   const { user } = useContext(AuthContext);
   const isAuthenticated = !!user;
 
-  // API Configuration
-  const API_BASE_URL = 'http://localhost:8000';
-  
+  // API Configuration - AI Service on port 8004
+  const API_BASE_URL = 'http://localhost:8004';
+
   const getAuthToken = () => {
     return localStorage.getItem('access_token');
   };
@@ -54,7 +54,7 @@ const AIChatWidget = () => {
     try {
       const token = getAuthToken();
       const response = await axios.post(
-        `${API_BASE_URL}/api/ai/chat/`,
+        `${API_BASE_URL}/api/chat/`,
         {
           message: userMessage,
           conversation_id: conversationId
@@ -67,9 +67,9 @@ const AIChatWidget = () => {
         }
       );
 
-      setMessages(prev => [...prev, { 
-        role: 'assistant', 
-        content: response.data.message 
+      setMessages(prev => [...prev, {
+        role: 'assistant',
+        content: response.data.message
       }]);
 
       if (!conversationId) {
@@ -79,10 +79,10 @@ const AIChatWidget = () => {
     } catch (err) {
       console.error('AI Chat Error:', err);
       setError(err.response?.data?.error || 'Failed to get response. Please try again.');
-      
-      setMessages(prev => [...prev, { 
-        role: 'error', 
-        content: 'Sorry, I encountered an error. Please try again.' 
+
+      setMessages(prev => [...prev, {
+        role: 'error',
+        content: 'Sorry, I encountered an error. Please try again.'
       }]);
     } finally {
       setIsLoading(false);
@@ -118,7 +118,7 @@ const AIChatWidget = () => {
         >
           <MessageCircle className="h-6 w-6" />
           <span className="absolute -top-1 -right-1 bg-green-500 h-3 w-3 rounded-full animate-pulse"></span>
-          
+
           <div className="absolute bottom-full right-0 mb-2 hidden group-hover:block">
             <div className="bg-gray-900 text-white text-sm rounded-lg py-2 px-3 whitespace-nowrap">
               Ask AI Assistant
@@ -202,13 +202,12 @@ const AIChatWidget = () => {
                     className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
                   >
                     <div
-                      className={`max-w-[80%] rounded-2xl px-4 py-2 ${
-                        message.role === 'user'
-                          ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white'
-                          : message.role === 'error'
+                      className={`max-w-[80%] rounded-2xl px-4 py-2 ${message.role === 'user'
+                        ? 'bg-gradient-to-r from-blue-600 to-purple-600 text-white'
+                        : message.role === 'error'
                           ? 'bg-red-50 text-red-600 border border-red-200'
                           : 'bg-white text-gray-800 shadow-sm border border-gray-200'
-                      }`}
+                        }`}
                     >
                       {message.role === 'assistant' && (
                         <div className="flex items-center space-x-2 mb-1">
@@ -259,7 +258,7 @@ const AIChatWidget = () => {
                   <span>Clear conversation</span>
                 </button>
               )}
-              
+
               <div className="flex items-end space-x-2">
                 <textarea
                   ref={inputRef}
