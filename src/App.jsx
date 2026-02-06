@@ -17,6 +17,7 @@ import AdminDashboard from "./pages/Admin/Dashboard";
 import UserProfile from "./pages/Client/Profile";
 import ChangePassword from "./components/ChangePassword";
 import FreelancerProfile from "./pages/Client/OutProfile";
+import FindFreelancersPage from "./pages/Client/FindFreelancersPage";
 
 // Job Pages
 import JobsMainPage from "./pages/Jobs/JobsMainPage";
@@ -196,21 +197,29 @@ const AppRoutes = () => {
               </ProtectedRoute>
             }
           />
-          <Route 
-            path="/client/saved-jobs" 
+          <Route
+            path="/client/find-freelancers"
             element={
-                <JobProvider>
-                <SavedJobsPage/>
-                </JobProvider>
-            } 
+              <ProtectedRoute allowedRoles={["client"]}>
+                <FindFreelancersPage />
+              </ProtectedRoute>
+            }
           />
-          <Route 
-            path="/client/profile" 
+          <Route
+            path="/client/saved-jobs"
+            element={
+              <JobProvider>
+                <SavedJobsPage />
+              </JobProvider>
+            }
+          />
+          <Route
+            path="/client/profile"
             element={
               <ProtectedRoute allowedRoles={['client', 'freelancer', 'admin']}>
                 <UserProfile />
               </ProtectedRoute>
-            } 
+            }
           />
           {/* Freelancer */}
           <Route
@@ -232,22 +241,22 @@ const AppRoutes = () => {
               </ProtectedRoute>
             }
           />
-          <Route 
-            path="/freelancer/accepted" 
+          <Route
+            path="/freelancer/accepted"
             element={
               <ProtectedRoute allowedRoles={['freelancer']}>
-               
-<FreelancerAcceptedBidsPage/>           
+
+                <FreelancerAcceptedBidsPage />
               </ProtectedRoute>
-            } 
+            }
           />
           {/* Post Job Route */}
-          <Route 
-            path="/jobs/post" 
+          <Route
+            path="/jobs/post"
             element={
               <ProtectedRoute allowedRoles={['client']}>
                 <JobProvider>
-                  <PostJobPage 
+                  <PostJobPage
                     onBack={() => window.history.back()}
                     onJobPosted={(job) => {
                       console.log('Job posted:', job);
@@ -256,7 +265,7 @@ const AppRoutes = () => {
                   />
                 </JobProvider>
               </ProtectedRoute>
-            } 
+            }
           />
           {/* Admin */}
           <Route
@@ -304,13 +313,13 @@ const AppRoutes = () => {
               </ProtectedRoute>
             }
           />
-          <Route 
-            path="/freelancer/profile/:userId" 
+          <Route
+            path="/freelancer/profile/:userId"
             element={
               <ProtectedRoute>
                 <FreelancerProfile />
               </ProtectedRoute>
-            } 
+            }
           />
         </Routes>
       </main>
